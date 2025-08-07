@@ -1,24 +1,20 @@
 import {Message} from "./Database";
 
 export class Queue {
-    private messages: Message[]
-    private messagesMap: {}
+    private messages: Map<string, Message>
     private messagesMeta: { [key: string]: any }
 
     constructor() {
-        this.messages = []
-        this.messagesMap = {}
+        this.messages = new Map()
         this.messagesMeta = {}
     }
 
     Enqueue = (message: Message) => {
-        this.messages.push(message)
-        this.messagesMap[message.id] = message
+        this.messages.set(message.id, message)
     }
 
     Dequeue = (workerId: number): Message | undefined => {
-        for (let i = 0; i < this.messages.length; i++) {
-            const message = this.messages[i]
+        for (const message of this.messages.values()) {
             if (!this.messagesMeta[message?.key]?.processing) {
                 this.messagesMeta[message?.key] = {}
                 this.messagesMeta[message?.key].processing = true;
@@ -30,31 +26,28 @@ export class Queue {
     }
 
     Confirm = (workerId: number, messageId: string) => {
-        const message = this.messagesMap[messageId]
+        const message = this.messages.get(messageId)
         const messageMetaByKey = this.messagesMeta[message?.key]
         const isKeyProcessing = messageMetaByKey?.processing
         const isCorrectWorker = messageMetaByKey.workerId === workerId
 
         if (isKeyProcessing && isCorrectWorker) {
-            const index = this.messages.findIndex(item => item.id === messageId);
             if (!messageMetaByKey?.ids.length) {
                 delete this.messagesMeta[message?.key]
-                delete this.messagesMap[message?.id]
             } else {
-                messageMetaByKey.ids = messageMetaByKey.ids.filter(id => id !== message.id)
+                messageMetaByKey.ids = messageMetaByKey.ids.filter((id: string) => id !== message.id)
                 if (!messageMetaByKey?.ids.length) {
                     delete this.messagesMeta[message?.key]
-                    delete this.messagesMap[message?.id]
                 }
             }
-            this.messages.splice(index, 1);
+            this.messages.delete(messageId);
         }
 
 
     }
 
     Size = () => {
-        return this.messages.length
+        return this.messages.size
     }
 }
 
