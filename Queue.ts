@@ -2,11 +2,18 @@ import {Message} from "./Database";
 
 export class Queue {
     private messages: Map<string, Message>
-    private messagesMetaByKey: Map
+    private keysMeta: Map
 
     constructor() {
         this.messages = new Map()
-        this.messagesMetaByKey = new Map()
+        this.keysMeta = new Map()
+    }
+
+    SetKeyMeta(key: string, processing: boolean, workerId: number): void {
+        this.keysMeta.set(key, new Map())
+        this.keysMeta.get(key)
+            .set('processing', processing)
+            .set('workerId', workerId)
     }
 
     Enqueue = (message: Message) => {
@@ -16,12 +23,10 @@ export class Queue {
     Dequeue = (workerId: number): Message | undefined => {
         for (const message of this.messages.values()) {
             const key = message?.key
-            const processingWorkerId = this.messagesMetaByKey.get(key)?.get('workerId')
-            if (!this.messagesMetaByKey.get(key)?.get('processing')) {
-                this.messagesMetaByKey.set(key, new Map())
-                const messageMetaByKey = this.messagesMetaByKey.get(key)
-                messageMetaByKey.set('processing', true)
-                messageMetaByKey.set('workerId', workerId)
+            const processingWorkerId = this.keysMeta.get(key)?.get('workerId')
+
+            if (!this.keysMeta.get(key)?.get('processing')) {
+                this.SetKeyMeta(key, true, workerId)
                 return message
             } else if(processingWorkerId === workerId) {
                 return message
@@ -30,10 +35,10 @@ export class Queue {
     }
 
     Confirm = (workerId: number, messageId: string) => {
-        const message = this.messages.get(messageId)
-        const messageMetaByKey = this.messagesMetaByKey.get(message?.key)
-        const isKeyProcessing = messageMetaByKey.get('processing')
-        const isCorrectWorker = messageMetaByKey.get('workerId') === workerId
+        const key = this.messages.get(messageId)?.key
+        const keyMeta = this.keysMeta.get(key)
+        const isKeyProcessing = keyMeta.get('processing')
+        const isCorrectWorker = keyMeta.get('workerId') === workerId
 
         if (isKeyProcessing && isCorrectWorker) {
             this.messages.delete(messageId);
