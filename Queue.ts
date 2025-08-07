@@ -31,14 +31,18 @@ export class Queue {
 
     Confirm = (workerId: number, messageId: string) => {
         const message = this.messagesMap[messageId]
-        if (message && this.messagesMeta[message?.key] && this.messagesMeta[message?.key].processing && this.messagesMeta[message?.key].workerId === workerId && this.messagesMeta[message?.key].ids.includes(messageId)) {
+        const messageMetaByKey = this.messagesMeta[message?.key]
+        const isKeyProcessing = messageMetaByKey?.processing
+        const isCorrectWorker = messageMetaByKey.workerId === workerId
+
+        if (isKeyProcessing && isCorrectWorker) {
             const index = this.messages.findIndex(item => item.id === messageId);
-            if (!this.messagesMeta[message?.key].ids.length) {
+            if (!messageMetaByKey?.ids.length) {
                 delete this.messagesMeta[message?.key]
                 delete this.messagesMap[message?.id]
             } else {
-                this.messagesMeta[message?.key].ids = this.messagesMeta[message?.key].ids.filter(id => id !== message.id)
-                if (!this.messagesMeta[message?.key].ids.length) {
+                messageMetaByKey.ids = messageMetaByKey.ids.filter(id => id !== message.id)
+                if (!messageMetaByKey?.ids.length) {
                     delete this.messagesMeta[message?.key]
                     delete this.messagesMap[message?.id]
                 }
