@@ -3,11 +3,12 @@ import {Message} from "./Database";
 export class Queue {
     private messages: Message[]
     private messagesMap: {}
-    private messagesMeta: { [key: string]: any } = {};
+    private messagesMeta: { [key: string]: any }
 
     constructor() {
         this.messages = []
         this.messagesMap = {}
+        this.messagesMeta = {}
     }
 
     Enqueue = (message: Message) => {
@@ -19,15 +20,10 @@ export class Queue {
         for (let i = 0; i < this.messages.length; i++) {
             const message = this.messages[i]
             if (!this.messagesMeta[message?.key]?.processing) {
-                console.log(`[${Date.now()}] Worker ${workerId} starting to process key: ${message.key}`);
                 this.messagesMeta[message?.key] = {}
                 this.messagesMeta[message?.key].processing = true;
                 this.messagesMeta[message?.key].workerId = workerId;
                 this.messagesMeta[message?.key].ids = [message?.id];
-                return message
-            } else if (this.messagesMeta[message?.key].processing && this.messagesMeta[message?.key].workerId === workerId && !this.messagesMeta[message?.key].ids.includes(message?.id)) {
-                console.log(`[${Date.now()}] Worker ${workerId} starting to process key: ${message.key}`);
-                this.messagesMeta[message?.key].ids.push(message?.id);
                 return message
             }
         }
