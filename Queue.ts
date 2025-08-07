@@ -22,7 +22,7 @@ export class Queue {
                 const messageMetaByKey = this.messagesMetaByKey.get(key)
                 messageMetaByKey.set('processing', true)
                 messageMetaByKey.set('workerId', workerId)
-                messageMetaByKey.set('ids', new Set([id]))
+                messageMetaByKey.set('id', id)
                 return message
             }
         }
@@ -31,18 +31,16 @@ export class Queue {
     Confirm = (workerId: number, messageId: string) => {
         const message = this.messages.get(messageId)
         const messageMetaByKey = this.messagesMetaByKey.get(message?.key)
-        const ids = messageMetaByKey.get('ids')
+        const id = messageMetaByKey.get('id')
         const isKeyProcessing = messageMetaByKey.get('processing')
         const isCorrectWorker = messageMetaByKey.get('workerId') === workerId
 
         if (isKeyProcessing && isCorrectWorker) {
-            if (!ids.size) {
+            if (!id) {
                  this.messagesMetaByKey.delete(message?.key)
             } else {
-                ids.delete(message?.id)
-                if (!ids.size) {
-                    this.messagesMetaByKey.delete(message?.key)
-                }
+                messageMetaByKey.delete('id')
+                this.messagesMetaByKey.delete(message?.key)
             }
             this.messages.delete(messageId);
         }
