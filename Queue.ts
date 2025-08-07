@@ -2,11 +2,11 @@ import {Message} from "./Database";
 
 export class Queue {
     private messages: Map<string, Message>
-    private messagesMeta: { [key: string]: any }
+    private messagesMetaByKey: Map
 
     constructor() {
         this.messages = new Map()
-        this.messagesMeta = {}
+        this.messagesMetaByKey = new Map()
     }
 
     Enqueue = (message: Message) => {
@@ -15,11 +15,14 @@ export class Queue {
 
     Dequeue = (workerId: number): Message | undefined => {
         for (const message of this.messages.values()) {
-            if (!this.messagesMeta[message?.key]?.processing) {
-                this.messagesMeta[message?.key] = {}
-                this.messagesMeta[message?.key].processing = true;
-                this.messagesMeta[message?.key].workerId = workerId;
-                this.messagesMeta[message?.key].ids = [message?.id];
+            const key = message?.key
+            const id = message?.id
+            if (!this.messagesMetaByKey.get(key)?.get('processing')) {
+                this.messagesMetaByKey.set(key, new Map())
+                const messageMetaByKey = this.messagesMetaByKey.get(key)
+                messageMetaByKey.set('processing', true)
+                messageMetaByKey.set('workerId', workerId)
+                messageMetaByKey.set('ids', new Set([id]))
                 return message
             }
         }
@@ -27,17 +30,18 @@ export class Queue {
 
     Confirm = (workerId: number, messageId: string) => {
         const message = this.messages.get(messageId)
-        const messageMetaByKey = this.messagesMeta[message?.key]
-        const isKeyProcessing = messageMetaByKey?.processing
-        const isCorrectWorker = messageMetaByKey.workerId === workerId
+        const messageMetaByKey = this.messagesMetaByKey.get(message?.key)
+        const ids = messageMetaByKey.get('ids')
+        const isKeyProcessing = messageMetaByKey.get('processing')
+        const isCorrectWorker = messageMetaByKey.get('workerId') === workerId
 
         if (isKeyProcessing && isCorrectWorker) {
-            if (!messageMetaByKey?.ids.length) {
-                delete this.messagesMeta[message?.key]
+            if (!ids.size) {
+                 this.messagesMetaByKey.delete(message?.key)
             } else {
-                messageMetaByKey.ids = messageMetaByKey.ids.filter((id: string) => id !== message.id)
-                if (!messageMetaByKey?.ids.length) {
-                    delete this.messagesMeta[message?.key]
+                ids.delete(message?.id)
+                if (!ids.size) {
+                    this.messagesMetaByKey.delete(message?.key)
                 }
             }
             this.messages.delete(messageId);
